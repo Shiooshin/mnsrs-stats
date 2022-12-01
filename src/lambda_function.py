@@ -1,3 +1,4 @@
+from __future__ import annotations
 from bs4 import BeautifulSoup
 from datetime import date
 import requests
@@ -6,8 +7,7 @@ import psycopg2
 
 
 def lambda_handler(event, context):
-    get_stats()
-    persist_stats()
+    persist_stats(parse_html())
 
 
 def get_stats():
@@ -126,4 +126,4 @@ def parse_card_container(prefix: str, container, loses_dict: dict[str, int]):
 
 
 if __name__ == "__main__":
-    persist_stats(parse_html())
+    lambda_handler(None, None)

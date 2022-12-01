@@ -6,7 +6,8 @@
 __pycache__/
 *.py[cod]
 
-
+# deps
+deps/
 
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
