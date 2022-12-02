@@ -1,6 +1,7 @@
 from __future__ import annotations
 from bs4 import BeautifulSoup
 from datetime import date
+from apscheduler.schedulers.blocking import BlockingScheduler
 import requests
 import os
 import psycopg2
@@ -10,17 +11,13 @@ def lambda_handler(event, context):
     persist_stats(parse_html())
 
 
-def get_stats():
-    pass
-
-
 def persist_stats(loses: dict):
 
     connection = psycopg2.connect(
-               host=os.environ.get('DB_HOST'),
-               database=os.environ.get('PG_DATABASE'),
-               user=os.getenv('DB_USER'),
-               password=os.environ.get('PG_PASSWORD'))
+        host=os.environ.get('DB_HOST'),
+        database=os.environ.get('PG_DATABASE'),
+        user=os.getenv('DB_USER'),
+        password=os.environ.get('PG_PASSWORD'))
 
     connection.cursor().execute('''INSERT INTO stats(date,
     personnel_total,
@@ -125,5 +122,12 @@ def parse_card_container(prefix: str, container, loses_dict: dict[str, int]):
         loses_dict[f'{prefix}_delta'] = 0
 
 
+def run_scheduler():
+    scheduler = BlockingScheduler()
+    scheduler.add_job(lambda_handler, 'interval', days=1)
+    scheduler.start()
+
+
 if __name__ == "__main__":
-    lambda_handler(None, None)
+    lambda_handler(None, None)  # immediate run
+    run_scheduler()
