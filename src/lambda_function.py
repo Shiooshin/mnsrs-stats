@@ -1,10 +1,9 @@
-from __future__ import annotations
 from bs4 import BeautifulSoup
 from datetime import date
-from apscheduler.schedulers.blocking import BlockingScheduler
 import requests
 import os
 import psycopg2
+import json
 
 
 def lambda_handler(event, context):
@@ -14,10 +13,10 @@ def lambda_handler(event, context):
 def persist_stats(loses: dict):
 
     connection = psycopg2.connect(
-        host=os.environ.get('DB_HOST'),
-        database=os.environ.get('PG_DATABASE'),
-        user=os.getenv('DB_USER'),
-        password=os.environ.get('PG_PASSWORD'))
+               host=os.environ.get('DB_HOST'),
+               database=os.environ.get('PG_DATABASE'),
+               user=os.getenv('DB_USER'),
+               password=os.environ.get('PG_PASSWORD'))
 
     connection.cursor().execute('''INSERT INTO stats(date,
     personnel_total,
@@ -60,10 +59,18 @@ def persist_stats(loses: dict):
 
 
 def parse_html():
-    URL = "https://www.minusrus.com/"
-    page = requests.get(URL)
+    headers={'Content-Type': 'application/json'}
 
-    soup = BeautifulSoup(page.content, 'html.parser')
+    
+    page_upd = requests.post(f'http://{os.environ.get("FF_HOST")}:8191/v1', json={
+        "cmd": "request.get",
+        "url": URL,
+        "maxTimeout": 60000
+    }, headers=headers)
+
+    flare_solver_response = json.loads(page_upd.content)
+
+    soup = BeautifulSoup(flare_solver_response['solution']['response'], 'html.parser')
     loses_dict = dict()
 
     loses_dict['date'] = date.today()
@@ -120,14 +127,3 @@ def parse_card_container(prefix: str, container, loses_dict: dict[str, int]):
             'span', 'card__amount-progress').text.replace('+', ''))
     else:
         loses_dict[f'{prefix}_delta'] = 0
-
-
-def run_scheduler():
-    scheduler = BlockingScheduler()
-    scheduler.add_job(lambda_handler, 'interval', days=1)
-    scheduler.start()
-
-
-if __name__ == "__main__":
-    lambda_handler(None, None)  # immediate run
-    run_scheduler()
